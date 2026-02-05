@@ -53,7 +53,8 @@ GPU availability is automatically detected:
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-4. Data Preprocessing Pipeline
+---
+## 4. Data Preprocessing Pipeline
 4.1 RGB Conversion
 
 Some images were not stored in RGB format.
@@ -84,7 +85,8 @@ transforms.Compose([
     transforms.ToTensor()
 ])
 
-5. Dataset Statistics (Mean & Standard Deviation)
+---
+## 5. Dataset Statistics (Mean & Standard Deviation)
 
 Instead of using ImageNet statistics, dataset-specific normalization was computed.
 
@@ -115,7 +117,8 @@ transforms.Compose([
 
 A second pass verifies that the normalized dataset has approximately zero mean and unit variance.
 
-6. Train / Validation Split
+---
+## 6. Train / Validation Split
 
 The dataset is split into training and validation subsets:
 
@@ -133,7 +136,8 @@ train_dataset, val_dataset = random_split(norm_dataset, (0.8, 0.2), generator=g)
 Class counts are computed after splitting to verify class representation.
 Bar charts are plotted for both training and validation datasets.
 
-7. Data Loading Strategy
+---
+## 7. Data Loading Strategy
 
 Separate data loaders are used:
 
@@ -143,7 +147,8 @@ Validation Loader	No	Model evaluation
 
 Batch size: 32
 
-8. Model Architecture & Transfer Learning
+---
+## 8. Model Architecture & Transfer Learning
 8.1 Base Model
 
 EfficientNet-B4
@@ -174,7 +179,8 @@ Output units: number of crop classes
 
 This enables task-specific learning.
 
-9. Training Strategy
+---
+## 9. Training Strategy
 9.1 Loss Function and Optimizer
 
 Loss: CrossEntropyLoss
@@ -214,7 +220,8 @@ Optimizer state
 
 Best validation loss
 
-10. Model Evaluation
+---
+## 10. Model Evaluation
 
 Evaluation metrics include:
 
@@ -230,7 +237,8 @@ Per-image qualitative predictions
 
 Metrics are stored in pandas DataFrames for analysis.
 
-11. Prediction & Visualization
+---
+## 11. Prediction & Visualization
 11.1 Probability Prediction
 
 Softmax probabilities are computed on the validation dataset.
@@ -243,7 +251,8 @@ A confusion matrix is generated using scikit-learn to visualize class-level perf
 
 Random validation images are displayed with their predicted crop labels to assess qualitative performance.
 
-12. Class Imbalance Handling (Undersampling)
+---
+## 12. Class Imbalance Handling (Undersampling)
 
 To address dataset imbalance:
 
@@ -280,7 +289,8 @@ Original imbalanced dataset
 
 Balanced (undersampled) dataset
 
-13. Key Takeaways
+---
+## 13. Key Takeaways
 
 Dataset-specific normalization improves training stability
 
