@@ -51,7 +51,6 @@ Key libraries used in this project include:
 
 GPU availability is automatically detected:
 
-```python
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 4. Data Preprocessing Pipeline
