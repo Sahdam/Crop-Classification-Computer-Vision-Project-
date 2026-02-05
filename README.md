@@ -1,303 +1,70 @@
-# Crop Classification with EfficientNet-B4 (End-to-End Deep Learning Pipeline)
-
-This repository presents a **complete end-to-end deep learning workflow for agricultural crop image classification** using **PyTorch**.  
-The project covers **data preprocessing, normalization, dataset splitting, model fine-tuning, training optimization, evaluation, class imbalance handling via undersampling, and retraining**.
-
-The entire pipeline was initially developed in **Google Colab** with GPU acceleration and later prepared for GitHub version control.
-
----
-
-## 1. Project Objective
-
-The goal of this project is to:
-
-- Build a **robust multi-class image classification model** for agricultural crops  
-- Apply **transfer learning** using a pretrained **EfficientNet-B4** architecture  
-- Perform **dataset-specific normalization**  
-- Implement **training best practices** such as learning rate scheduling, early stopping, and checkpointing  
-- Address **class imbalance** using undersampling  
-- Evaluate performance both **quantitatively and visually**
-
----
-
-## 2. Dataset Structure
-
-The dataset follows the standard `ImageFolder` format required by `torchvision`:
-
-- The dataset contains images of multiple crops stored in directories named after the crop classes. You can find this in data folder
-data/
- ├── banana/
- ├── almond/
- ├── clove/
- └── ...
----
-
-- Each subfolder corresponds to a **crop class**
-- Images vary in size and color mode (RGB and non-RGB)
-
----
-
-## 3. Environment & Dependencies
-
-Key libraries used in this project include:
-
-- `torch`, `torchvision`
-- `torchinfo`
-- `numpy`, `pandas`
-- `matplotlib`
-- `tqdm`
-- `PIL`
-- `scikit-learn`
-
-GPU availability is automatically detected:
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
----
-## 4. Data Preprocessing Pipeline
-4.1 RGB Conversion
-
-Some images were not stored in RGB format.
-To ensure compatibility with EfficientNet, a custom transformation was implemented:
-
-class ConvertToRGB(object):
-    def __call__(self, image):
-        if image.mode != "RGB":
-            image = image.convert("RGB")
-        return image
-
-
-This guarantees all images have three channels.
-
-4.2 Initial Image Transformations
-
-Before normalization, images undergo the following preprocessing steps:
-
-Conversion to RGB
-
-Resize to 380 × 380 (EfficientNet-B4 input resolution)
-
-Conversion to tensor
-
-transforms.Compose([
-    ConvertToRGB(),
-    transforms.Resize((380, 380)),
-    transforms.ToTensor()
-])
-
----
-## 5. Dataset Statistics (Mean & Standard Deviation)
-
-Instead of using ImageNet statistics, dataset-specific normalization was computed.
-
-5.1 Mean and Standard Deviation Computation
-
-A custom function iterates through the dataset to calculate:
-
-Channel-wise mean
-
-Channel-wise variance and standard deviation
-
-mean, std = get_mean_std(data_loader)
-
-
-This ensures normalization is tailored to the agricultural dataset, improving training stability.
-
-5.2 Normalized Dataset
-
-A normalized dataset is created using the computed statistics:
-
-transforms.Compose([
-    ConvertToRGB(),
-    transforms.Resize((380, 380)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=mean, std=std)
-])
-
-
-A second pass verifies that the normalized dataset has approximately zero mean and unit variance.
-
----
-## 6. Train / Validation Split
-
-The dataset is split into training and validation subsets:
-
-80% training
-
-20% validation
-
-Fixed random seed for reproducibility
-
-g = torch.Generator().manual_seed(42)
-train_dataset, val_dataset = random_split(norm_dataset, (0.8, 0.2), generator=g)
-
-6.1 Class Distribution Analysis
-
-Class counts are computed after splitting to verify class representation.
-Bar charts are plotted for both training and validation datasets.
-
----
-## 7. Data Loading Strategy
-
-Separate data loaders are used:
-
-Loader	Shuffle	Purpose
-Train Loader	Yes	Model training
-Validation Loader	No	Model evaluation
-
-Batch size: 32
-
----
-## 8. Model Architecture & Transfer Learning
-8.1 Base Model
-
-EfficientNet-B4
-
-Pretrained on ImageNet
-
-models.efficientnet_b4(weights=EfficientNet_B4_Weights.DEFAULT)
-
-8.2 Freezing Pretrained Layers
-
-All feature extractor layers are frozen to prevent overfitting:
-
-for param in model.parameters():
-    param.requires_grad = False
-
-8.3 Custom Classification Head
-
-The original classifier is replaced with:
-
-Linear → ReLU → Dropout → Linear
-
-
-Hidden units: 500
-
-Dropout rate: 0.5
-
-Output units: number of crop classes
-
-This enables task-specific learning.
-
----
-## 9. Training Strategy
-9.1 Loss Function and Optimizer
-
-Loss: CrossEntropyLoss
-
-Optimizer: Adam
-
-Learning rate: 0.001
-
-Weight decay: 1e-4
-
-9.2 Learning Rate Scheduler
-
-A StepLR scheduler is used:
-
-Step size: 4 epochs
-
-Gamma: 0.2
-
-This gradually reduces the learning rate during training.
-
-9.3 Early Stopping
-
-Training stops if validation loss does not improve for 5 consecutive epochs, preventing overfitting.
-
-9.4 Model Checkpointing
-
-The best model (based on validation loss) is saved automatically:
-
-model/LR_model.pth
-
-
-The checkpoint includes:
-
-Model weights
-
-Optimizer state
-
-Best validation loss
-
----
-## 10. Model Evaluation
-
-Evaluation metrics include:
-
-Training and validation loss
-
-Training and validation accuracy
-
-Learning rate progression
-
-Confusion matrix
-
-Per-image qualitative predictions
-
-Metrics are stored in pandas DataFrames for analysis.
-
----
-## 11. Prediction & Visualization
-11.1 Probability Prediction
-
-Softmax probabilities are computed on the validation dataset.
-
-11.2 Confusion Matrix
-
-A confusion matrix is generated using scikit-learn to visualize class-level performance.
-
-11.3 Visual Inspection
-
-Random validation images are displayed with their predicted crop labels to assess qualitative performance.
-
----
-## 12. Class Imbalance Handling (Undersampling)
-
-To address dataset imbalance:
-
-A custom undersampling function was implemented
-
-Each class is reduced to the same number of samples
-
-Files are copied into a new directory
-
-undersampled/
-├── banana/
-├── maize/
-└── ...
-
-12.1 Retraining on Balanced Dataset
-
-The entire pipeline is repeated on the undersampled dataset:
-
-Dataset loading
-
-Train/validation split
-
-Training
-
-Evaluation
-
-Confusion matrix
-
-Prediction visualization
-
-This enables direct comparison between:
-
-Original imbalanced dataset
-
-Balanced (undersampled) dataset
-
----
-## 13. Key Takeaways
-
-Dataset-specific normalization improves training stability
-
-Transfer learning significantly reduces training time
-
-Undersampling improves fairness across minority classes
-
-Learning rate scheduling and early stopping reduce overfitting
-
-Visual inspection complements numerical metrics
+# Crop Classification using EfficientNetB4
+
+## Project Overview
+This project focuses on classifying various agricultural crops from image data using a deep learning approach. The goal is to build a robust model capable of accurately identifying different crop types, which can be beneficial for agricultural monitoring, yield prediction, and disease detection.
+
+## Dataset
+The dataset used for this project consists of images of 30 different agricultural crop types, sourced from the `Agricultural-crops` directory. 
+
+Initially, the dataset exhibited class imbalance, which is a common challenge in real-world image datasets. To address this, an undersampling strategy was implemented to create a more balanced subset for training, ensuring that the model does not become biased towards majority classes.
+
+## Methodology
+
+### 1. Data Preprocessing
+*   **Image Transformation**: Images were converted to RGB format, resized to `(380, 380)`, and converted to PyTorch tensors.
+*   **Normalization**: The dataset's mean and standard deviation were calculated (mean: `[0.4782, 0.5156, 0.3332]`, std: `[0.2537, 0.2383, 0.2710]`) and applied for normalization, which helps in stabilizing and accelerating the training process.
+*   **Data Splitting**: The dataset was split into training (80%) and validation (20%) sets. For the undersampled dataset, a similar split was performed.
+
+### 2. Model Architecture
+*   **Base Model**: `EfficientNetB4` was chosen as the base model, pretrained on ImageNet, leveraging the power of transfer learning.
+*   **Feature Extraction**: The pre-trained `EfficientNetB4` layers (`model.features`) were frozen to retain their learned feature extraction capabilities.
+*   **Custom Classifier Head**: A new classification head (`nn.Sequential`) was added on top of the frozen base model, consisting of:
+    *   A `Linear` layer with input features matching the `EfficientNetB4`'s classifier input (`1792`).
+    *   `ReLU` activation function.
+    *   `Dropout` layer with `p=0.5` for regularization.
+    *   A final `Linear` layer mapping to the number of output classes (30).
+
+### 3. Training Strategy
+*   **Loss Function**: `nn.CrossEntropyLoss` was used, suitable for multi-class classification.
+*   **Optimizer**: `Adam` optimizer with a learning rate of `0.001` and `weight_decay=1e-4`.
+*   **Learning Rate Scheduler**: `StepLR` was employed to reduce the learning rate by a factor of `gamma=0.2` every `step_size=4` epochs.
+*   **Early Stopping**: Training was halted if the validation loss did not improve for 5 consecutive epochs to prevent overfitting.
+*   **Checkpointing**: The model state with the best validation loss was saved.
+
+### 4. Undersampling
+To address class imbalance, an `undersample_dataset` function was implemented. This function samples a `target_count` (which is the minimum count of any class in the original dataset) number of images from each class, creating a new, more balanced dataset. The model was then fine-tuned on this undersampled dataset.
+
+## Results
+
+### Original Dataset Training
+The model was initially trained on the full, albeit imbalanced, dataset.
+*   **Epochs**: The training ran for 19 epochs before early stopping was triggered.
+*   **Final Training Loss**: ~0.2002
+*   **Final Training Accuracy**: ~97.32%
+*   **Final Validation Loss**: ~0.5985
+*   **Final Validation Accuracy**: ~70.31%
+
+### Undersampled Dataset Training
+After undersampling to balance the class distribution, the model was further trained.
+*   **Epochs**: The training ran for 16 epochs before early stopping was triggered.
+*   **Final Training Loss**: ~0.3106
+*   **Final Training Accuracy**: ~93.94%
+*   **Final Validation Loss**: ~0.3177
+*   **Final Validation Accuracy**: ~96.09%
+
+The undersampling approach significantly improved validation accuracy, indicating a better generalization across classes.
+
+## Visualizations
+*   **Loss and Accuracy Plots**: Graphs showing training and validation loss/accuracy over epochs.
+*   **Learning Rate Schedule**: Plot illustrating the dynamic changes in the learning rate during training.
+*   **Confusion Matrix**: Visual representation of the model's performance on the validation set, detailing correct and incorrect classifications for each class. This was generated for both original and undersampled validation sets.
+*   **Sample Predictions**: Displays sample images from the validation set with their corresponding predicted class labels.
+
+## Conclusion
+This project successfully demonstrates the application of transfer learning with EfficientNetB4 for crop classification. The implementation of an undersampling strategy proved crucial in improving the model's performance on the validation set, especially in handling class imbalance. The model achieved a validation accuracy of over 96% on the undersampled dataset, indicating its strong capability for the task.
+
+## Future Work
+*   Explore other data augmentation techniques to further enhance model generalization.
+*   Experiment with different transfer learning models (e.g., ResNet, VGG) and fine-tuning strategies.
+*   Investigate advanced sampling techniques (e.g., SMOTE) or weighted loss functions to handle imbalance.
+*   Deploy the model as a web service for real-time crop classification.
